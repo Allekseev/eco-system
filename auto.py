@@ -22,15 +22,15 @@ class Auto:
             [((0, 0), 0)],
         ]
         self.point = ()
-        self.old = False
+        self.old = ()
         self.new = False
         self.counter = 0
-        self.funcs = (self.transitoin0, self.closestPlantPoint1, self.eatPoint2, self.goPoint3, self.pregnancy4, self.goUp5)
+        self.funcs = (self.transitoin0, self.closestFoodPoint1, self.eatPoint2, self.goPoint3, self.pregnancy4, self.goUp5)
         self.arrows = (self.simple0, self.foodTest1)
         self.nodes = [self.funcs[0], self.funcs[4], self.funcs[5], self.funcs[1], self.funcs[0], self.funcs[3], self.funcs[2]]
 
     def turn(self, dirt, field):
-        self.old = False
+        self.old = ()
         arrow = 0
         while True:
             if arrow >= len(self.matrix[self.posNode]):
@@ -52,10 +52,11 @@ class Auto:
     def transitoin0(self, dirt, field):
         return 0
 
-    def closestPlantPoint1(self, dirt, field):
+    def closestFoodPoint1(self, dirt, field):
         resPoint = ()
         for point in self.body.see:
-            if dirt[point[0]][point[1]] and (dirt[point[0]][point[1]].name == "grass" or dirt[point[0]][point[1]].name == "berry"):
+            if (dirt[point[0]][point[1]] and dirt[point[0]][point[1]].name in self.body.diet) or \
+                    (field[point[0]][point[1]] and (field[point[0]][point[1]].gen != self.body.gen or field[point[0]][point[1]].name == 'corpse') and field[point[0]][point[1]].name in self.body.diet):
                 if resPoint:
                     if distance((self.body.x, self.body.y), point) < distance((self.body.x, self.body.y), resPoint):
                         resPoint = point
@@ -67,19 +68,26 @@ class Auto:
         return -1
 
     def eatPoint2(self, dirt, field):
-        point = dirt[self.point[0]][self.point[1]]
-        if not point or point.name not in self.body.diet:
+        if not self.point:
             return -1
-        if distance((point.x, point.y), (self.body.x, self.body.y)) < 2:
-            self.old = self.body.eat(point)
-            return 1
+        for point in (dirt[self.point[0]][self.point[1]], field[self.point[0]][self.point[1]]):
+            if not point:
+                self.point = ()
+                continue
+            if distance((point.x, point.y), (self.body.x, self.body.y)) < 2:
+                self.point = ()
+                if not point or point.name not in self.body.diet:
+                    continue
+                self.body.seed += point.seed
+                self.old = (self.body.eat(point),)
+                return 1
         return -1
 
     def goPoint3(self, dirt, field):
-        if distance((self.point[0], self.point[1]), (self.body.x, self.body.y)) < 2:
+        if not self.point or distance((self.point[0], self.point[1]), (self.body.x, self.body.y)) < 2:
             return -1
         steps = self.body.speed
-        while steps and distance((self.point[0], self.point[1]), (self.body.x, self.body.y)) > 1:
+        while steps and distance((self.point[0], self.point[1]), (self.body.x, self.body.y)) > 0:
             pos = []
             d = self.body.x - self.point[0]
             if d > machine.height//2 or 0 > d > -machine.height//2:
@@ -110,9 +118,9 @@ class Auto:
         return 1
 
     def pregnancy4(self, dirt, field):
-        if self.body.baby or self.body.food < machine.babyCost:
+        if self.body.baby or self.body.stomach < machine.babyCost:
             return -1
-        self.body.food -= machine.babyCost
+        self.body.stomach -= machine.babyCost
         self.body.baby = 1
         return 1
 
@@ -132,4 +140,4 @@ class Auto:
         return True
 
     def foodTest1(self, c):
-        return self.body.food > c
+        return self.body.stomach > c
