@@ -4,15 +4,16 @@ import auto
 
 height = 100
 width = 100
-plantNewChance = 10
+plantNewChance = 5
 plantDieChance = 10
 plantMutChance = 1
 plantGrowTime = 10
 plantOldTime = 100
-plantFood = 4
+plantFood = 6
 animalBirth = 75
-animalHunger = 2
+animalHunger = 3
 animalOld = 100
+animalDisappear = 100
 babyCost = 25
 
 
@@ -25,6 +26,7 @@ class Grass:
         self.mut = Berry
         self.grow = 0
         self.age = 0
+        self.seed = 0
         self.food = plantFood
         self.neighborhood = []
         for i in range(x - 1, x + 2):
@@ -67,12 +69,14 @@ class Berry:
         self.mut = Grass
         self.grow = 0
         self.age = 0
+        self.seed = 0
         self.food = plantFood
 
     def turn(self, dirt):
         old = ()
         new = ()
         self.age += 1
+        self.seed = max(0, min(5, self.age // (100 // plantNewChance) - 1))
         if self.age == plantGrowTime:
             self.name = 'berry'
         if self.age >= plantOldTime and random.randint(1, 100) <= plantDieChance:
@@ -90,11 +94,14 @@ class Animal:
         self.teeth = 'standard'
         self.diet = ['berry', 'grass']
         self.name = 'animal'
+        self.gen = 0
         self.speed = 1
         self.hear = 1
         self.vision = 0
         self.hungerCount = 1
-        self.food = animalBirth
+        self.seed = 0
+        self.stomach = animalBirth
+        self.food = 50
         self.maxFood = 100
         self.eyes = []
         self.see = set()
@@ -120,30 +127,53 @@ class Animal:
         if self.baby:
             food //= 2
             self.baby += food
-        self.food += food
-        while self.food > self.maxFood:
-            self.food -= 5
+        self.stomach += food
+        while self.stomach > self.maxFood:
+            self.stomach -= 5
             self.maxFood += 1
         self.look((dish.x, dish.y))
         return dish
 
+    def born(self):
+        self.baby = 0
+        res = Animal((self.x + self.eyes[0] * -1) % height, (self.y + self.eyes[1] * -1) % width)
+        res.diet = self.diet
+        res.gen = self.gen
+        return res
+
     def turn(self, dirt, field):
         self.age += 1
-        new = False
+        if self.name == 'corpse':
+            if self.age == animalDisappear:
+                return (self, ), ()
+            return (), ()
+        self.auto.old = ()
+        new = []
         if not self.age % animalOld:
             self.hungerCount += 1
         if not self.age % animalHunger:
-            self.food -= self.hungerCount + bool(self.baby)
-        if self.food < 1:
-            return self, False
+            self.stomach -= self.hungerCount + bool(self.baby)
+            if self.seed and not dirt[self.x][self.y]:
+                self.seed -= 1
+                if random.randint(1, 100) <= plantMutChance:
+                    new.append(Grass(self.x, self.y))
+                else:
+                    new.append(Berry(self.x, self.y))
+        if self.stomach < 1:
+            self.name = 'corpse'
+            self.gen = -1
+            self.age = 0
+            self.stomach = 0
+            return (), ()
+        self.see.clear()
         for i in range(self.x - self.hear, self.x + self.hear + 1):
             for j in range(self.y - self.hear, self.y + self.hear + 1):
                 self.see.add((i % height, j % width))
         old = self.auto.turn(dirt, field)
         if self.baby >= animalBirth:
-            new = Animal((self.x + self.eyes[0] * -1) % height, (self.y + self.eyes[1] * -1) % width)
-            self.baby = 0
+            new.append(self.born())
         return old, new
+
 
 class Control:
 
@@ -155,8 +185,7 @@ class Control:
         for i in range(height):
             line = []
             for j in range(width):
-                if random.randint(1, 100) == 100:
-                    print('0')
+                if random.randint(1, 100) <= 2:
                     self.plants.append(Grass(i, j))
                     line.append(self.plants[len(self.plants) - 1])
                 else:
@@ -165,10 +194,17 @@ class Control:
         for i in range(height):
             line = []
             for j in range(width):
-                line.append(False)
+                if (i or j) and random.randint(1, 100) <= 1:
+                    if random.randint(1, 100) <= 25:
+                        self.animals.append(Animal(i, j))
+                        self.animals[len(self.animals) - 1].gen = 1
+                        self.animals[len(self.animals) - 1].diet = ['corpse', 'animal']
+                    else:
+                        self.animals.append(Animal(i, j))
+                    line.append(self.animals[len(self.animals) - 1])
+                else:
+                    line.append(False)
             self.field.append(line)
-        self.animals.append(Animal(50, 50))
-        self.field[50][50] = self.animals[0]
 
     def turn(self):
         newPlants = self.plants.copy()
@@ -189,14 +225,21 @@ class Control:
             end = animal.turn(self.dirt, self.field)
             if end:
                 old, new = end
-                if old:
-                    if old.name == 'animal':
-                        newAnimals.remove(old)
-                        self.field[old.x][old.y] = False
+                for o in old:
+                    if o.name == 'animal' or o.name == 'corpse':
+                        o.name = 'corpse'
+                        o.gen = -1
+                        if o in newAnimals:
+                            newAnimals.remove(o)
+                        self.field[o.x][o.y] = False
                     else:
-                        self.plants.remove(old)
-                        self.dirt[old.x][old.y] = False
-                if new:
-                    newAnimals.insert(0, new)
-                    self.field[new.x][new.y] = new
+                        self.plants.remove(o)
+                        self.dirt[o.x][o.y] = False
+                for n in new:
+                    if n.name == 'seed':
+                        self.plants.insert(0, n)
+                        self.dirt[n.x][n.y] = n
+                    else:
+                        newAnimals.insert(0, n)
+                        self.field[n.x][n.y] = n
         self.animals = newAnimals
