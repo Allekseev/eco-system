@@ -21,9 +21,10 @@ while run:
         elif plant.name == 'berry':
             pygame.draw.rect(sc, (100, 0, 0), (plant.x * cell, plant.y * cell, cell, cell))
     for animal in control.animals:
-        pygame.draw.rect(sc, (0, 0, 40 * (animal.age // 100)), (animal.x * cell, animal.y * cell, cell, cell))
+        pygame.draw.rect(sc, (0, 0, ('berry' in animal.diet) * 200), (animal.x * cell, animal.y * cell, cell, cell))
     pygame.display.flip()
     clock.tick(10)
     control.turn()
+    # 40 * (animal.age // 100)
 
 pygame.quit()
