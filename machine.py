@@ -127,7 +127,7 @@ class Animal:
         self.family.add(1)
         self.rgb = [0, 0, 200]
         self.speed = 1
-        self.hear = 2
+        self.hear = 2    # дальность обзора животных
         self.vision = 0
         self.hungerCount = 1
         self.seed = 0
