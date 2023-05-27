@@ -47,7 +47,7 @@ class Auto:
     def __init__(self, animal):
         self.body = animal
         self.posNode = 0
-        self.matrix = travelerMatrix
+        self.matrix = lazyCowMatrix
         self.size = 11
         self.steps = 1
         self.point = ()
@@ -59,9 +59,9 @@ class Auto:
                       self.turnLeft10, self.turnRight11)
         self.arrows = (self.simple0, self.foodMoreTest1, self.foodLessTest2, self.speedMoreTest3, self.speedLessTest4,
                        self.hearMoreTest5, self.hearLessTest6)
-        self.nodes = herbivorousNodes
+        self.nodes = lazyCowNodes
         self.rudiments = []
-        for i in range(len(self.nodes)):
+        for i in range(len(self.nodes) + 5):  # временно
             self.rudiments.append(1)
 
     def turn(self, dirt, field):
