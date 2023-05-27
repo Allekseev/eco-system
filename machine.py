@@ -9,12 +9,12 @@ plantMutChance = 0
 plantGrowTime = 10
 plantOldTime = 100
 plantSpreadTime = 30    # время на размножение травы
-plantFood = 3    # питательность травы
-animalFood = 35    # питательность при поедании жертвы
+plantFood = 4    # питательность травы
+animalFood = 20    # питательность при поедании жертвы
 animalBirth = 75
 animalHunger = 5    # чем выше тем реже животное голодает
 animalOld = 100    # количество циклов до старения (животное начинает быстрее голодать)
-animalDisappear = 200    # время до исчезновения трупа min 1
+animalDisappear = 50    # время до исчезновения трупа min 1
 animalUpgrade = 25
 animalCorrect = 0
 animalMut = 0
@@ -464,7 +464,7 @@ class Control:
         self.herbivores = []
         self.dec = 0
         self.last = 1
-        self.memory = {-1: [], 0: [], 1: []}
+        self.memory = {-2: [], -1: [], 0: [], 1: []}
         for i in range(height):
             line = []
             for j in range(width):
@@ -486,6 +486,7 @@ class Control:
                         self.animals[len(self.animals) - 1].family.add(0)
                         self.animals[len(self.animals) - 1].rgb = [0, 0, 100]
                         self.animals[len(self.animals) - 1].auto.nodes = auto.predatorNodes
+                        self.animals[len(self.animals) - 1].auto.matrix = auto.travelerMatrix
                     else:
                         self.animals.append(Animal(i, j))
                     line.append(self.animals[len(self.animals) - 1])
@@ -547,8 +548,9 @@ class Control:
             self.dec += 1
             for key in sta:
                 self.memory[key].append(sta[key])
+            self.memory[-2].append(len(self.plants))
             print(self.dec, "; хищники", sta[0], "; травоядные", sta[1], "; останки", sta[-1])
         if not self.dec % 50 and not time % 10:
             #print(self.memory, "*")
-            tmp = pd.DataFrame({"хищники": self.memory[0], "травоядные": self.memory[1], "останки": self.memory[-1]})
+            tmp = pd.DataFrame({"хищники": self.memory[0], "травоядные": self.memory[1], "останки": self.memory[-1], "трава": self.memory[-2]})
             tmp.to_excel('./population.xlsx', sheet_name='auto collect')
