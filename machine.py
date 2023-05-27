@@ -1,5 +1,6 @@
 import random
 import auto
+import pandas as pd
 
 
 height = 150
@@ -463,6 +464,7 @@ class Control:
         self.herbivores = []
         self.dec = 0
         self.last = 1
+        self.memory = {-1: [], 0: [], 1: []}
         for i in range(height):
             line = []
             for j in range(width):
@@ -477,7 +479,7 @@ class Control:
             line = []
             for j in range(width):
                 if (i or j) and random.randint(1, 100) <= 1:    # примерный процент клеток с животными в начале
-                    if random.randint(1, 100) <= 9:    # примерный процент хищников в начале
+                    if random.randint(1, 100) <= 8:    # примерный процент хищников в начале
                         self.animals.append(Animal(i, j))
                         self.animals[len(self.animals) - 1].gen = 0
                         self.animals[len(self.animals) - 1].family = set()
@@ -543,4 +545,10 @@ class Control:
         self.animals = newAnimals
         if not time % 10:    # вывод количества животных каждую десятую итерацию
             self.dec += 1
-            print(self.dec, "; хищники", sta[0], "; травоядные", sta[1], "; трупы", sta[-1])
+            for key in sta:
+                self.memory[key].append(sta[key])
+            print(self.dec, "; хищники", sta[0], "; травоядные", sta[1], "; останки", sta[-1])
+        if not self.dec % 50 and not time % 10:
+            #print(self.memory, "*")
+            tmp = pd.DataFrame({"хищники": self.memory[0], "травоядные": self.memory[1], "останки": self.memory[-1]})
+            tmp.to_excel('./population.xlsx', sheet_name='auto collect')
